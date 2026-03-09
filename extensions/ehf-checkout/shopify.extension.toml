@@ -1,0 +1,11 @@
+api_version = "2025-04"
+
+[[extensions]]
+uid = "af469bfe-9622-41f1-8fbd-1a3b38cff3bcfe2d47ed"
+type = "ui_extension"
+name = "EHF Bedriftsfaktura"
+handle = "ehf-checkout"
+
+[[extensions.targeting]]
+module = "./src/Checkout.tsx"
+target = "purchase.checkout.payment-method-list.render-after"

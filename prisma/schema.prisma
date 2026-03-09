@@ -1,0 +1,275 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Shopify session storage ---
+model Session {
+  id          String    @id
+  shop        String
+  state       String
+  isOnline    Boolean   @default(false)
+  scope       String?
+  expires     DateTime?
+  accessToken String
+  userId      BigInt?
+  firstName   String?
+  lastName    String?
+  email       String?
+  accountOwner Boolean  @default(false)
+  locale      String?
+  collaborator Boolean? @default(false)
+  emailVerified Boolean? @default(false)
+}
+
+// --- Shop settings ---
+model Shop {
+  id             String    @id @default(cuid())
+  shopDomain     String    @unique
+  accessToken    String    // encrypted
+  scopes         String
+  planName       String?
+  installedAt    DateTime  @default(now())
+  uninstalledAt  DateTime?
+  isActive       Boolean   @default(true)
+
+  // Sender info
+  senderCompany  String    @default("")
+  senderOrgNr    String    @default("")
+  senderVatNr    String    @default("")
+  senderAddress  String    @default("")
+  senderZip      String    @default("")
+  senderCity     String    @default("")
+  senderCountry  String    @default("NO")
+  senderEmail    String    @default("")
+  senderPhone    String    @default("")
+  senderBankAccount String @default("")
+  senderIBAN     String    @default("")
+  senderBIC      String    @default("")
+  peppolParticipantId String @default("") // e.g. 0192:123456789
+
+  // Invoice settings
+  invoicePrefix  String    @default("INV")
+  invoiceStartNumber Int   @default(1)
+  defaultPaymentTermsDays Int @default(14)
+  invoiceMode    InvoiceMode @default(MANUAL)
+  defaultSendEmail Boolean @default(true)
+  defaultSendEhf Boolean  @default(false)
+
+  // EHF customization IDs (configurable)
+  ehfCustomizationId String @default("urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0")
+  ehfProfileId String @default("urn:fdc:peppol.eu:2017:poacc:billing:01:1.0")
+
+  // Peppol provider config (encrypted)
+  peppolProviderApiUrl String @default("")
+  peppolProviderApiKey String @default("") // encrypted
+  peppolProviderSenderId String @default("")
+
+  // SMTP config (encrypted fields)
+  smtpHost   String  @default("")
+  smtpPort   Int     @default(587)
+  smtpSecure Boolean @default(false)
+  smtpUser   String  @default("")
+  smtpPass   String  @default("") // encrypted
+  smtpFrom   String  @default("")
+
+  // Billing
+  subscriptionId      String?
+  subscriptionStatus  String?  @default("pending")
+  trialEndsAt         DateTime?
+  billingPlanActive   Boolean  @default(false)
+  ehfSentThisMonth    Int      @default(0)
+  billingMonthYear    String   @default("") // "2025-01"
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  b2bCustomers  B2BCustomer[]
+  invoices      Invoice[]
+  webhookEvents WebhookEvent[]
+  auditLogs     AuditLog[]
+  fikenIntegration FikenIntegration?
+}
+
+enum InvoiceMode {
+  AUTO_ON_PAID
+  MANUAL
+}
+
+// --- B2B Customer profiles ---
+model B2BCustomer {
+  id               String   @id @default(cuid())
+  shopId           String
+  shop             Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopifyCustomerId String
+  companyName      String
+  orgNr            String   // 9 digits, validated mod11
+  invoiceEmail     String
+  peppolParticipantId String @default("") // e.g. 0192:123456789
+  reference        String   @default("")  // bestiller/reference
+  paymentTermsDays Int      @default(14)
+  kidFormat        KidFormat @default(NONE)
+  sendEmail        Boolean  @default(true)
+  sendEhf          Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  invoices Invoice[]
+
+  @@unique([shopId, shopifyCustomerId])
+  @@index([shopId])
+  @@index([orgNr])
+}
+
+enum KidFormat {
+  NONE
+  KID10
+  KID15
+}
+
+// --- Invoices ---
+model Invoice {
+  id              String        @id @default(cuid())
+  shopId          String
+  shop            Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  b2bCustomerId   String?
+  b2bCustomer     B2BCustomer?  @relation(fields: [b2bCustomerId], references: [id])
+  shopifyOrderId  String
+  shopifyOrderName String
+  invoiceNumber   String        // e.g. INV-2025-0001
+  issueDate       DateTime      @default(now())
+  dueDate         DateTime
+  status          InvoiceStatus @default(DRAFT)
+  currency        String        @default("NOK")
+  kidNumber       String?
+
+  // Totals (stored in øre/cents as Int to avoid float issues)
+  subtotalOre     Int           @default(0)
+  vatOre          Int           @default(0)
+  totalOre        Int           @default(0)
+
+  // Raw data snapshot
+  orderDataJson   Json          // raw Shopify order
+  buyerDataJson   Json          // buyer info snapshot
+
+  // Generated artifacts
+  pdfPath         String?
+  ehfXmlPath      String?
+
+  // Send status
+  emailSentAt     DateTime?
+  ehfSentAt       DateTime?
+  emailError      String?
+  ehfError        String?
+  ehfProviderRef  String?       // provider's doc ID for tracking
+
+  // Fiken sync
+  fikenSaleId     String?
+  fikenSyncedAt   DateTime?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  lines InvoiceLine[]
+
+  @@unique([shopId, invoiceNumber])
+  @@index([shopId, status])
+  @@index([shopId, shopifyOrderId])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  READY
+  SENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+model InvoiceLine {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  lineNum     Int
+  description String
+  quantity    Float
+  unitPriceOre Int   // unit price ex. VAT in øre
+  vatRate     Float   @default(0.25) // 0.25 = 25%
+  vatOre      Int
+  lineNetOre  Int     // quantity * unitPriceOre
+  lineTotalOre Int   // lineNetOre + vatOre
+  shopifyLineItemId String?
+}
+
+// --- Invoice number sequence per shop ---
+model InvoiceSequence {
+  shopId  String @id
+  current Int    @default(0)
+}
+
+// --- Webhook events ---
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  topic       String
+  shopifyId   String   // X-Shopify-Webhook-Id for idempotency
+  payload     Json
+  status      WebhookStatus @default(PENDING)
+  attempts    Int      @default(0)
+  lastError   String?
+  processedAt DateTime?
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime // for cleanup
+
+  @@unique([shopId, shopifyId])
+  @@index([shopId, status])
+}
+
+enum WebhookStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+  SKIPPED
+}
+
+// --- Audit log ---
+model AuditLog {
+  id        String   @id @default(cuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  action    String
+  entityType String
+  entityId  String?
+  details   Json?
+  actorType String   @default("system") // system | user
+  actorId   String?
+  requestId String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime // for cleanup
+
+  @@index([shopId, action])
+  @@index([shopId, entityType, entityId])
+}
+
+// --- Fiken Integration ---
+model FikenIntegration {
+  id            String   @id @default(cuid())
+  shopId        String   @unique
+  shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  accessToken   String   // encrypted
+  refreshToken  String   // encrypted
+  tokenExpiresAt DateTime?
+  companySlug   String
+  isActive      Boolean  @default(true)
+  lastSyncAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

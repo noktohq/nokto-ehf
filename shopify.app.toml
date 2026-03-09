@@ -1,0 +1,32 @@
+# shopify.app.toml
+name = "Nokto EHF"
+client_id = "2a615373d7b78a56189a65de6c1d701e"
+application_url = "https://nokto-ehf.fly.dev"
+embedded = true
+
+[access_scopes]
+scopes = "read_orders,write_orders,read_customers,write_customers,read_products"
+
+[auth]
+redirect_urls = [
+  "https://nokto-ehf.fly.dev/auth/callback",
+  "https://nokto-ehf.fly.dev/auth/fiken/callback"
+]
+
+[webhooks]
+api_version = "2025-01"
+
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "/webhooks"
+
+[[webhooks.subscriptions]]
+topics = ["orders/create", "orders/paid", "refunds/create"]
+uri = "/webhooks"
+
+[pos]
+embedded = false
+
+[build]
+automatically_update_urls_on_dev = false
+dev_store_url = ""

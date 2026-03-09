@@ -1,0 +1,18 @@
+{
+  "name": "ehf-checkout",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "shopify app build --source-map"
+  },
+  "dependencies": {
+    "@shopify/ui-extensions": "2025.1.*",
+    "@shopify/ui-extensions-react": "2025.1.*",
+    "react": "^19.2.4",
+    "react-reconciler": "^0.33.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.5.0"
+  }
+}
