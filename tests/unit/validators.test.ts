@@ -27,9 +27,9 @@ describe("validateOrgNr", () => {
   });
 
   it("rejects numbers where remainder === 1 (inherently invalid)", () => {
-    // These cannot produce valid org numbers since checkDigit would be 10
-    // We just verify invalid ones return false
-    expect(validateOrgNr("000000000")).toBe(false);
+    // When weighted sum % 11 === 1, checkDigit would need to be 10 — impossible.
+    // "400000000": weights·digits = 3*4 = 12, 12 % 11 = 1 → inherently invalid.
+    expect(validateOrgNr("400000000")).toBe(false);
   });
 });
 
