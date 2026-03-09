@@ -14,6 +14,7 @@ import {
   Banner,
   InlineStack,
 } from "@shopify/polaris";
+import { useState } from "react";
 import { authenticate } from "~/shopify.server";
 import { db } from "~/db.server";
 import { validateOrgNr, generatePeppolId } from "~/lib/validators";
@@ -86,8 +87,49 @@ export async function action({ request, params }: ActionFunctionArgs) {
   return json({ error: "Unknown action" });
 }
 
+type BrregStatus = "idle" | "loading" | "found" | "not-found";
+
 export default function CustomerEditPage() {
   const { customer } = useLoaderData<typeof loader>();
+
+  const [orgNr, setOrgNr] = useState(customer.orgNr);
+  const [orgNrError, setOrgNrError] = useState("");
+  const [companyName, setCompanyName] = useState(customer.companyName);
+  const [peppolId, setPeppolId] = useState(customer.peppolParticipantId ?? "");
+  const [brregStatus, setBrregStatus] = useState<BrregStatus>("idle");
+
+  const fetchFromBrreg = async (val: string) => {
+    if (!validateOrgNr(val)) { setOrgNrError("Ugyldig organisasjonsnummer"); return; }
+    setOrgNrError("");
+    setBrregStatus("loading");
+    try {
+      const res = await fetch(`https://data.brreg.no/enhetsregisteret/api/enheter/${val}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCompanyName(data.navn ?? companyName);
+        setPeppolId(`0192:${val}`);
+        setBrregStatus("found");
+      } else {
+        setBrregStatus("not-found");
+      }
+    } catch {
+      setBrregStatus("not-found");
+    }
+  };
+
+  const handleOrgNrChange = (val: string) => {
+    setOrgNr(val);
+    setOrgNrError("");
+    setBrregStatus("idle");
+    if (val.length === 9) fetchFromBrreg(val);
+  };
+
+  const brregBanner =
+    brregStatus === "found" ? (
+      <Banner tone="success">✓ Firmanavn og Peppol ID hentet fra Brønnøysundregistrene</Banner>
+    ) : brregStatus === "not-found" ? (
+      <Banner tone="warning">Fant ikke selskapet i Brønnøysundregistrene — fyll inn manuelt</Banner>
+    ) : null;
 
   return (
     <Page
@@ -102,33 +144,49 @@ export default function CustomerEditPage() {
               <BlockStack gap="300">
                 <Text variant="headingMd" as="h2">B2B-profil</Text>
 
-                <TextField
-                  label="Firmanavn"
-                  name="companyName"
-                  defaultValue={customer.companyName}
-                  autoComplete="organization"
-                />
-                <InlineStack gap="300">
+                {brregBanner}
+
+                <InlineStack gap="300" blockAlign="end">
                   <TextField
                     label="Organisasjonsnummer"
                     name="orgNr"
-                    defaultValue={customer.orgNr}
+                    value={orgNr}
+                    onChange={handleOrgNrChange}
+                    error={orgNrError}
+                    helpText={brregStatus === "loading" ? "Henter fra Brønnøysundregistrene…" : undefined}
                     autoComplete="off"
                   />
-                  <TextField
-                    label="Faktura e-post"
-                    name="invoiceEmail"
-                    type="email"
-                    defaultValue={customer.invoiceEmail}
-                    autoComplete="email"
-                  />
+                  <Button
+                    onClick={() => fetchFromBrreg(orgNr)}
+                    loading={brregStatus === "loading"}
+                    disabled={orgNr.length !== 9}
+                  >
+                    Hent fra BR
+                  </Button>
                 </InlineStack>
+
+                <TextField
+                  label="Firmanavn"
+                  name="companyName"
+                  value={companyName}
+                  onChange={setCompanyName}
+                  autoComplete="organization"
+                />
+                <TextField
+                  label="Faktura e-post"
+                  name="invoiceEmail"
+                  type="email"
+                  defaultValue={customer.invoiceEmail}
+                  autoComplete="email"
+                />
                 <TextField
                   label="Peppol Participant ID"
                   name="peppolParticipantId"
-                  defaultValue={customer.peppolParticipantId}
+                  value={peppolId}
+                  onChange={setPeppolId}
                   autoComplete="off"
                   placeholder="0192:123456789"
+                  helpText="Auto-fylt fra Brønnøysundregistrene"
                 />
                 <TextField
                   label="Referanse / Bestiller"

@@ -196,17 +196,41 @@ export default function CustomersPage() {
   );
 }
 
+type BrregStatus = "idle" | "loading" | "found" | "not-found";
+
 function AddCustomerModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [orgNr, setOrgNr] = useState("");
   const [orgNrError, setOrgNrError] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [peppolId, setPeppolId] = useState("");
+  const [brregStatus, setBrregStatus] = useState<BrregStatus>("idle");
 
-  const validateOrg = (val: string) => {
-    if (val.length === 9 && !validateOrgNr(val)) {
-      setOrgNrError("Ugyldig organisasjonsnummer");
-    } else {
-      setOrgNrError("");
+  const handleOrgNrChange = async (val: string) => {
+    setOrgNr(val);
+    setOrgNrError("");
+    if (val.length !== 9) { setBrregStatus("idle"); return; }
+    if (!validateOrgNr(val)) { setOrgNrError("Ugyldig organisasjonsnummer"); return; }
+
+    setBrregStatus("loading");
+    try {
+      const res = await fetch(`https://data.brreg.no/enhetsregisteret/api/enheter/${val}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCompanyName(data.navn ?? "");
+        setPeppolId(`0192:${val}`);
+        setBrregStatus("found");
+      } else {
+        setBrregStatus("not-found");
+      }
+    } catch {
+      setBrregStatus("not-found");
     }
   };
+
+  const brregHelpText =
+    brregStatus === "loading" ? "Henter fra Brønnøysundregistrene…" :
+    brregStatus === "found"   ? "✓ Hentet fra Brønnøysundregistrene" :
+    brregStatus === "not-found" ? "Fant ikke selskapet i Brønnøysundregistrene" : undefined;
 
   return (
     <Modal
@@ -227,23 +251,32 @@ function AddCustomerModal({ open, onClose }: { open: boolean; onClose: () => voi
               placeholder="123456789"
               helpText="Finn i Shopify Admin under Kunder"
             />
-            <TextField label="Firmanavn" name="companyName" autoComplete="organization" />
             <TextField
               label="Organisasjonsnummer"
               name="orgNr"
               value={orgNr}
-              onChange={(v) => { setOrgNr(v); validateOrg(v); }}
+              onChange={handleOrgNrChange}
               error={orgNrError}
+              helpText={brregHelpText}
               autoComplete="off"
               placeholder="123456789"
+            />
+            <TextField
+              label="Firmanavn"
+              name="companyName"
+              value={companyName}
+              onChange={setCompanyName}
+              autoComplete="organization"
             />
             <TextField label="Faktura e-post" name="invoiceEmail" type="email" autoComplete="email" />
             <TextField
               label="Peppol Participant ID"
               name="peppolParticipantId"
+              value={peppolId}
+              onChange={setPeppolId}
               autoComplete="off"
-              placeholder="0192:123456789 (auto-genereres)"
-              helpText="La stå tomt for å auto-generere fra org.nr"
+              placeholder="0192:123456789"
+              helpText="Auto-fylt fra org.nr via Brønnøysundregistrene"
             />
             <TextField
               label="Referanse / Bestiller"
