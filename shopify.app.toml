@@ -24,6 +24,11 @@ uri = "/webhooks"
 topics = ["orders/create", "orders/paid", "refunds/create"]
 uri = "/webhooks"
 
+# Mandatory GDPR compliance webhooks (required for Shopify App Store)
+[[webhooks.subscriptions]]
+topics = ["customers/data_request", "customers/redact", "shop/redact"]
+uri = "/webhooks"
+
 [pos]
 embedded = false
 
