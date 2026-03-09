@@ -10,7 +10,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   if (!shop) return json({ error: "Not found" }, { status: 404 });
 
   const [customers, invoices, auditLogs] = await Promise.all([
-    db.b2bCustomer.findMany({
+    db.b2BCustomer.findMany({
       where: { shopId: shop.id },
       select: {
         companyName: true,

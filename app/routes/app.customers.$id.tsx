@@ -24,7 +24,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const shop = await db.shop.findUnique({ where: { shopDomain: session.shop } });
   if (!shop) throw new Response("Not found", { status: 404 });
 
-  const customer = await db.b2bCustomer.findFirst({
+  const customer = await db.b2BCustomer.findFirst({
     where: { id: params.id, shopId: shop.id },
   });
 
@@ -50,7 +50,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
     const peppolId = (formData.get("peppolParticipantId") as string) || generatePeppolId(orgNr);
 
-    await db.b2bCustomer.update({
+    await db.b2BCustomer.update({
       where: { id: params.id, shopId: shop.id },
       data: {
         companyName: formData.get("companyName") as string,
@@ -76,7 +76,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
   }
 
   if (intent === "delete") {
-    await db.b2bCustomer.update({
+    await db.b2BCustomer.update({
       where: { id: params.id, shopId: shop.id },
       data: { isActive: false },
     });

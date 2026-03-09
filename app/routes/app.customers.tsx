@@ -1,17 +1,17 @@
 // app/routes/app.customers.tsx
 import {
   json,
-  redirect,
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
 } from "@remix-run/node";
-import { Form, useLoaderData, useNavigation, useActionData } from "@remix-run/react";
+import { Form, useLoaderData, useActionData } from "@remix-run/react";
 import {
   Page,
   Layout,
   Card,
   DataTable,
   Button,
+  Link,
   Modal,
   TextField,
   Text,
@@ -47,7 +47,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const shop = await db.shop.findUnique({ where: { shopDomain: session.shop } });
   if (!shop) return json({ customers: [], error: null });
 
-  const customers = await db.b2bCustomer.findMany({
+  const customers = await db.b2BCustomer.findMany({
     where: { shopId: shop.id, isActive: true },
     orderBy: { companyName: "asc" },
   });
@@ -94,7 +94,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
     const customerId = `gid://shopify/Customer/${data.shopifyCustomerId.replace(/\D/g, "")}`;
 
-    await db.b2bCustomer.upsert({
+    await db.b2BCustomer.upsert({
       where: { shopId_shopifyCustomerId: { shopId: shop.id, shopifyCustomerId: customerId } },
       update: {
         companyName: data.companyName,
@@ -134,7 +134,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
   if (intent === "delete") {
     const customerId = formData.get("customerId") as string;
-    await db.b2bCustomer.update({
+    await db.b2BCustomer.update({
       where: { id: customerId, shopId: shop.id },
       data: { isActive: false },
     });
@@ -155,7 +155,7 @@ export default function CustomersPage() {
     c.invoiceEmail,
     c.peppolParticipantId || "—",
     `${c.paymentTermsDays} dager`,
-    <Button size="slim" url={`/app/customers/${c.id}`}>Rediger</Button>,
+    <Link url={`/app/customers/${c.id}`}>Rediger</Link>,
   ]);
 
   return (

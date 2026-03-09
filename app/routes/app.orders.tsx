@@ -91,7 +91,7 @@ export async function action({ request }: ActionFunctionArgs) {
     return json({ error: "Ordre mangler kunde. Kan ikke opprette faktura." });
   }
 
-  const b2bCustomer = await db.b2bCustomer.findFirst({
+  const b2bCustomer = await db.b2BCustomer.findFirst({
     where: { shopId: shop.id, shopifyCustomerId: customerId },
   });
 

@@ -138,7 +138,7 @@ async function handleGdprWebhook(
         const shopifyCustomerId = `gid://shopify/Customer/${customerId}`;
         const shopRecord = await db.shop.findUnique({ where: { shopDomain: shop } });
         if (shopRecord) {
-          await db.b2bCustomer.updateMany({
+          await db.b2BCustomer.updateMany({
             where: { shopId: shopRecord.id, shopifyCustomerId },
             data: { companyName: "[redacted]", invoiceEmail: "[redacted]", reference: "" },
           });
@@ -150,7 +150,7 @@ async function handleGdprWebhook(
       // Invoices are retained per 7-year retention policy (Norwegian bokføringslov).
       const shopRecord = await db.shop.findUnique({ where: { shopDomain: shop } });
       if (shopRecord) {
-        await db.b2bCustomer.deleteMany({ where: { shopId: shopRecord.id } });
+        await db.b2BCustomer.deleteMany({ where: { shopId: shopRecord.id } });
         await db.webhookEvent.deleteMany({ where: { shopId: shopRecord.id } });
         await db.shop.update({
           where: { id: shopRecord.id },
@@ -222,13 +222,13 @@ async function handleOrderEvent(
 
     // Auto-create B2B customer from checkout attributes if EHF was requested
     if (ehf.requested && ehf.orgNr) {
-      const existingB2B = await db.b2bCustomer.findFirst({
+      const existingB2B = await db.b2BCustomer.findFirst({
         where: { shopId: shop.id, shopifyCustomerId: customerId },
       });
 
       if (!existingB2B) {
         log.info({ orgNr: ehf.orgNr, companyName: ehf.companyName }, "Auto-creating B2B customer from checkout");
-        await db.b2bCustomer.create({
+        await db.b2BCustomer.create({
           data: {
             shopId: shop.id,
             shopifyCustomerId: customerId,
@@ -242,7 +242,7 @@ async function handleOrderEvent(
         });
       } else if (ehf.reference && ehf.reference !== existingB2B.reference) {
         // Update reference if changed
-        await db.b2bCustomer.update({
+        await db.b2BCustomer.update({
           where: { id: existingB2B.id },
           data: { reference: ehf.reference },
         });
@@ -250,7 +250,7 @@ async function handleOrderEvent(
     }
 
     // Now check for B2B customer (either existing or just created)
-    const b2bCustomer = await db.b2bCustomer.findFirst({
+    const b2bCustomer = await db.b2BCustomer.findFirst({
       where: { shopId: shop.id, shopifyCustomerId: customerId },
     });
 
