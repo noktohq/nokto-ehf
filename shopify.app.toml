@@ -1,7 +1,7 @@
 # shopify.app.toml
 name = "Nokto EHF"
 client_id = "2a615373d7b78a56189a65de6c1d701e"
-application_url = "https://nokto-ehf.fly.dev"
+application_url = "https://ehf.nokto.no"
 embedded = true
 
 [access_scopes]
@@ -9,8 +9,8 @@ scopes = "read_orders,write_orders,read_customers,write_customers,read_products"
 
 [auth]
 redirect_urls = [
-  "https://nokto-ehf.fly.dev/auth/callback",
-  "https://nokto-ehf.fly.dev/auth/fiken/callback"
+  "https://ehf.nokto.no/auth/callback",
+  "https://ehf.nokto.no/auth/fiken/callback"
 ]
 
 [webhooks]
