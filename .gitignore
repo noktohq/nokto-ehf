@@ -1,6 +1,7 @@
 node_modules/
 build/
 .cache/
+.next/
 *.env
 !.env.example
 .DS_Store
@@ -11,3 +12,6 @@ storage/
 *.log
 .shopify/
 dist/
+DockerDesktopWSL/
+hello-fly/
+nul
