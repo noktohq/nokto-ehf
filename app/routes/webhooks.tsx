@@ -13,6 +13,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const requestId = uuidv4();
   const log = logger.child({ topic, shop, requestId });
 
+  // Mandatory GDPR compliance webhooks – must return 200 regardless of shop state
+  if (topic === "CUSTOMERS_DATA_REQUEST" || topic === "CUSTOMERS_REDACT" || topic === "SHOP_REDACT") {
+    return handleGdprWebhook(topic, shop, payload as Record<string, unknown>, log);
+  }
+
   const shopifyWebhookId = request.headers.get("X-Shopify-Webhook-Id") ?? uuidv4();
 
   // Find shop record
@@ -105,6 +110,61 @@ async function handleAppUninstalled(shopId: string, shopDomain: string) {
   });
 
   logger.info({ shopDomain }, "Shop deactivated after uninstall");
+}
+
+// ---------------------------------------------------------------------------
+// GDPR compliance webhooks (mandatory for Shopify App Store)
+// ---------------------------------------------------------------------------
+async function handleGdprWebhook(
+  topic: string,
+  shop: string,
+  payload: Record<string, unknown>,
+  log: ReturnType<typeof logger.child>
+): Promise<Response> {
+  log.info({ payload }, `GDPR webhook received: ${topic}`);
+
+  try {
+    if (topic === "CUSTOMERS_DATA_REQUEST") {
+      // Shopify requests all data we hold for a customer.
+      // We hold: B2bCustomer records and Invoice records linked to a shopifyCustomerId.
+      // No data export is required beyond acknowledgement for apps that process
+      // data only for the merchant's benefit (EHF invoice generation).
+      log.info("CUSTOMERS_DATA_REQUEST acknowledged – no personal data to export beyond invoices");
+    } else if (topic === "CUSTOMERS_REDACT") {
+      // Redact customer personal data 10 days after request.
+      // We anonymise the B2BCustomer record but keep invoices for 7-year retention.
+      const customerId = (payload.customer as { id?: number } | undefined)?.id;
+      if (customerId) {
+        const shopifyCustomerId = `gid://shopify/Customer/${customerId}`;
+        const shopRecord = await db.shop.findUnique({ where: { shopDomain: shop } });
+        if (shopRecord) {
+          await db.b2bCustomer.updateMany({
+            where: { shopId: shopRecord.id, shopifyCustomerId },
+            data: { companyName: "[redacted]", invoiceEmail: "[redacted]", reference: "" },
+          });
+          log.info({ shopifyCustomerId }, "CUSTOMERS_REDACT: B2B customer data anonymised");
+        }
+      }
+    } else if (topic === "SHOP_REDACT") {
+      // Shop has been uninstalled for 48+ hours. Delete all transient data.
+      // Invoices are retained per 7-year retention policy (Norwegian bokføringslov).
+      const shopRecord = await db.shop.findUnique({ where: { shopDomain: shop } });
+      if (shopRecord) {
+        await db.b2bCustomer.deleteMany({ where: { shopId: shopRecord.id } });
+        await db.webhookEvent.deleteMany({ where: { shopId: shopRecord.id } });
+        await db.shop.update({
+          where: { id: shopRecord.id },
+          data: { accessToken: "", isActive: false },
+        });
+        log.info("SHOP_REDACT: transient shop data deleted (invoices retained per retention policy)");
+      }
+    }
+  } catch (err) {
+    // Log but always return 200 – Shopify will retry on non-2xx
+    log.error({ err }, "GDPR webhook handler error");
+  }
+
+  return new Response("OK", { status: 200 });
 }
 
 // Extract EHF checkout attributes from order note_attributes

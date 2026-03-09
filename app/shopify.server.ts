@@ -67,6 +67,19 @@ const shopify = shopifyApp({
       deliveryMethod: "http" as const,
       callbackUrl: "/webhooks",
     },
+    // Mandatory GDPR compliance webhooks (required by Shopify App Store)
+    CUSTOMERS_DATA_REQUEST: {
+      deliveryMethod: "http" as const,
+      callbackUrl: "/webhooks",
+    },
+    CUSTOMERS_REDACT: {
+      deliveryMethod: "http" as const,
+      callbackUrl: "/webhooks",
+    },
+    SHOP_REDACT: {
+      deliveryMethod: "http" as const,
+      callbackUrl: "/webhooks",
+    },
   },
 });
 
