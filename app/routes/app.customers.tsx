@@ -155,7 +155,7 @@ export default function CustomersPage() {
     c.invoiceEmail,
     c.peppolParticipantId || "—",
     `${c.paymentTermsDays} dager`,
-    <Link url={`/app/customers/${c.id}`}>Rediger</Link>,
+    <Link key={`edit-${c.id}`} url={`/app/customers/${c.id}`}>Rediger</Link>,
   ]);
 
   return (

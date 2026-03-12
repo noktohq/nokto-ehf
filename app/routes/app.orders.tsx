@@ -143,16 +143,16 @@ export default function OrdersPage() {
     o.name,
     o.customer,
     o.createdAt,
-    <Badge tone={o.financialStatus === "PAID" ? "success" : "info"}>
+    <Badge key={`status-${o.id}`} tone={o.financialStatus === "PAID" ? "success" : "info"}>
       {o.financialStatus}
     </Badge>,
     o.total,
     o.existingInvoice ? (
-      <Badge tone={o.existingInvoice.status === "SENT" ? "success" : "attention"}>
+      <Badge key={`inv-${o.id}`} tone={o.existingInvoice.status === "SENT" ? "success" : "attention"}>
         {o.existingInvoice.invoiceNumber}
       </Badge>
     ) : (
-      <Form method="post">
+      <Form key={`form-${o.id}`} method="post">
         <input type="hidden" name="orderId" value={o.id} />
         <input type="hidden" name="orderName" value={o.name} />
         <input type="hidden" name="customerId" value={o.customerId ?? ""} />

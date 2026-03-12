@@ -81,7 +81,7 @@ export default function LogsPage() {
 
   const webhookRows = webhookLogs.map((w) => [
     w.topic,
-    <Badge tone={STATUS_BADGE[w.status]}>{w.status}</Badge>,
+    <Badge key={w.id} tone={STATUS_BADGE[w.status]}>{w.status}</Badge>,
     w.attempts,
     w.lastError ?? "—",
     new Date(w.createdAt).toLocaleString("nb-NO"),

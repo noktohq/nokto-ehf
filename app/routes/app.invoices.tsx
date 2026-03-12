@@ -101,14 +101,14 @@ export default function InvoicesPage() {
   }
 
   const rows = invoices.map((inv) => [
-    <Link url={`/app/invoices/${inv.id}`}>{inv.invoiceNumber}</Link>,
+    <Link key={`link-${inv.id}`} url={`/app/invoices/${inv.id}`}>{inv.invoiceNumber}</Link>,
     inv.orderName,
     inv.customer,
-    <Badge tone={STATUS_BADGES[inv.status]}>{inv.status}</Badge>,
+    <Badge key={`badge-${inv.id}`} tone={STATUS_BADGES[inv.status]}>{inv.status}</Badge>,
     `kr ${inv.totalNok}`,
     inv.issueDate,
     inv.dueDate,
-    <Form method="post">
+    <Form key={`form-${inv.id}`} method="post">
       <input type="hidden" name="intent" value="send" />
       <input type="hidden" name="invoiceId" value={inv.id} />
       <Button

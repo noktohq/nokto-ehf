@@ -37,7 +37,7 @@ export default function PrivacyPolicy() {
       <h2>4. Dataoverføring og tredjepart</h2>
       <ul>
         <li><strong>Peppol Access Point:</strong> EHF-XML overføres via et norsk/europeisk Access Point til mottakers regnskapssystem.</li>
-        <li><strong>Fiken (valgfritt):</strong> Dersom aktivert, synkroniseres fakturadata til Fiken AS' API.</li>
+        <li><strong>Fiken (valgfritt):</strong> Dersom aktivert, synkroniseres fakturadata til Fiken AS&apos; API.</li>
         <li><strong>E-post (SMTP):</strong> Faktura-PDF sendes til oppgitt e-postadresse via SMTP-leverandør.</li>
         <li>Ingen data selges eller deles med tredjeparter for markedsføringsformål.</li>
       </ul>
