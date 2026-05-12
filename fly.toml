@@ -26,7 +26,7 @@ primary_region = 'fra'
   RETENTION_WEBHOOK_LOGS = '90'
   RETENTION_AUDIT_LOGS = '180'
   RETENTION_INVOICES = '2555'
-  PEPPOL_PROVIDER = 'production'
+  PEPPOL_PROVIDER = 'mock'
 
 [http_service]
   internal_port = 3000
